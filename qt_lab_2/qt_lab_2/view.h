@@ -13,23 +13,30 @@ class View : public QGLWidget, protected QGLFunctions
     enum vis { kVisualisationQuads, kVisualisationQuadStrip, kVisualisationTexture } visualisation_state;
     enum axis { x, y, z } axis_cut;
     int layer;
+
+    GLfloat xR; 
+    GLfloat yR; 
+    GLfloat zR; 
+    GLfloat nSca; 
+    QPoint ptrMousePosition;
 public:
     View::View(QWidget* parent) : QGLWidget(parent), data(), layer(0), visualisation_state(kVisualisationQuads), axis_cut(x) 
     {
         setMinimumSize(800, 500);
+        xR = -90; yR = 0; zR = 0; nSca = 1;
     }
 
     void initializeGL()
     {
         glGenTextures(1, &VBOtexture);
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-        // устанавливаем заполняющий цвет
+        // СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј Р·Р°РїРѕР»РЅСЏСЋС‰РёР№ С†РІРµС‚
         qglClearColor(Qt::black);
-        // устанавливаем режим сглаживания
+        // СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЂРµР¶РёРј СЃРіР»Р°Р¶РёРІР°РЅРёСЏ
         glShadeModel(GL_SMOOTH);
-        // задаем модельно-видовую матрицу
+        // Р·Р°РґР°РµРј РјРѕРґРµР»СЊРЅРѕ-РІРёРґРѕРІСѓСЋ РјР°С‚СЂРёС†Сѓ
         glMatrixMode(GL_MODELVIEW);
-        // загрузка единичной матрицы
+        // Р·Р°РіСЂСѓР·РєР° РµРґРёРЅРёС‡РЅРѕР№ РјР°С‚СЂРёС†С‹
         glLoadIdentity();
     }
 
@@ -37,13 +44,13 @@ public:
     {
         vWidth = nWidth;
         vHeight = nHeight;
-        // установка режима матрицы
+        // СѓСЃС‚Р°РЅРѕРІРєР° СЂРµР¶РёРјР° РјР°С‚СЂРёС†С‹
         glMatrixMode(GL_PROJECTION);
-        // загрузка единичной матрицы
+        // Р·Р°РіСЂСѓР·РєР° РµРґРёРЅРёС‡РЅРѕР№ РјР°С‚СЂРёС†С‹
         glLoadIdentity();
-        // установка ортогонального преобразования
+        // СѓСЃС‚Р°РЅРѕРІРєР° РѕСЂС‚РѕРіРѕРЅР°Р»СЊРЅРѕРіРѕ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
         glOrtho(0.0f, data.getWidth() - 1, 0.0f, data.getHeight() - 1, -1.0f, 1.0f);
-        // установка окна обзора 
+        // СѓСЃС‚Р°РЅРѕРІРєР° РѕРєРЅР° РѕР±Р·РѕСЂР° 
         glViewport(10, 10, nWidth-20, nHeight-20);
         update();
     }
@@ -221,8 +228,9 @@ public:
     void paintGL()
     {
         qDebug() << "p: " << visualisation_state;
-        //очистка экрана
+        //РѕС‡РёСЃС‚РєР° СЌРєСЂР°РЅР°
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glScalef(nSca, nSca, nSca);
         switch (visualisation_state)
         {
         case kVisualisationQuads:
@@ -249,7 +257,7 @@ public:
     {
         /*if (event->nativeVirtualKey() == Qt::Key_U)
         {
-            // Подняться на слой выше
+            // РџРѕРґРЅСЏС‚СЊСЃСЏ РЅР° СЃР»РѕР№ РІС‹С€Рµ
             for (int i(0); i < data.getHeight(); ++i)
             {
                 if (layer < data.getDepth() - 1)
@@ -263,7 +271,7 @@ public:
 
         else if (event->nativeVirtualKey() == Qt::Key_D)
         {
-            // Опуститься на слой ниже
+            // РћРїСѓСЃС‚РёС‚СЊСЃСЏ РЅР° СЃР»РѕР№ РЅРёР¶Рµ
             if (layer != 0)
             {
                 layer--;
@@ -355,120 +363,139 @@ public:
         int num;
             switch (ev)
             {
-            case Qt::Key_E:
-                QMessageBox::StandardButton reply;
-                reply = QMessageBox::question(this, QString::fromUtf8("Scale"),
-                    QString::fromUtf8("Yes - Increase \nNo - Decrease"),
-                    QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-                if (reply == QMessageBox::Yes)
-                {
-                    glScalef(1.1, 1.1, 1.1);
-                }
-                else if (reply == QMessageBox::No)
-                {
-                    glScalef(0.9, 0.9, 0.9);
-                }
-                else return;
-                break;
-            case Qt::Key_A:
-                num = QInputDialog::getInt(0, "Set max", "New max is:", 1, 1);
-                if(bOk) //нажата ОК
-                    data.SetMax(num);
-                break;
-            case Qt::Key_C:
-                num = QInputDialog::getInt(0, "Set min", "New min is:", 1, 1);
-                if (bOk)
-                    data.SetMin(num);
-                break;
-            case Qt::Key_U:
-                // Подняться на слой выше
-                if (layer < data.getDepth() - 1)
-                {
-                    layer++;
-                }
-                break;
-
-            case Qt::Key_D:
-                // Опуститься на слой ниже
-                if (layer != 0)
-                {
-                    layer--;
-                }
-                break;
-
-            case Qt::Key_N:
-                if (visualisation_state == kVisualisationQuads)
-                {
-                    visualisation_state = kVisualisationQuadStrip;
-                }
-
-                else if (visualisation_state == kVisualisationQuadStrip)
-                {
-                    visualisation_state = kVisualisationTexture;
-                }
-
-                else
-                {
-                    visualisation_state = kVisualisationQuads;
-                }
-
-                layer = 0;
+            case Qt::Key_S:
+                glTranslatef(0.0f, 5.0f, 0.0f);    
                 break;
 
             case Qt::Key_W:
-                if (axis_cut == axis::x)
-                {
-                    axis_cut = axis::y;
-                }
-                else if (axis_cut == axis::y)
-                {
-                    axis_cut = axis::z;
-                }
-                else if (axis_cut == axis::z)
-                {
-                    axis_cut = axis::x;
-                }
-
-                layer = 0;
+                glTranslatef(0.0f, -5.0f, 0.0f);    
                 break;
 
-            case Qt::Key_B:
-                std::string path = data.getPath();
-                if (path == "data/Join.bin")
-                {
-                    path = "data/FOURDIX-1.bin";
-                    data.clear();
-                    data.readFile(path);
-                }
-                else if (path == "data/FOURDIX-1.bin")
-                {
-                    path = "data/FOURDIX-systolic.bin";
-                    data.clear();
-                    data.readFile(path);
-                }
-                else if (path == "data/FOURDIX-systolic.bin")
-                {
-                    path = "data/p3-after2operation1.bin";
-                    data.clear();
-                    data.readFile(path);
-                }
-                else if (path == "data/p3-after2operation1.bin")
-                {
-                    path = "data/torso1.bin";
-                    data.clear();
-                    data.readFile(path);
-                }
-                else if (path == "data/torso1.bin")
-                {
-                    path = "data/Join.bin";
-                    data.clear();
-                    data.readFile(path);
-                }
-                resizeGL(data.getWidth(), data.getHeight());
-                //resizeGL(600, 400);
+            case Qt::Key_D:
+                glTranslatef(-5.0f, 0.0f, 0.0f);
                 break;
-                }
+
+            case Qt::Key_A:
+                glTranslatef(5.0f, 0.0f, 0.0f);
+                break;
+
+                case Qt::Key_F:
+                    scale_plus();  // РїСЂРёР±Р»РёР·РёС‚СЊ СЃС†РµРЅСѓ
+                    break;
+
+                case Qt::Key_G:
+                    scale_minus(); // СѓРґР°Р»РёС‚СЊСЃСЏ РѕС‚ СЃС†РµРЅС‹
+                    break;
             
+                case Qt::Key_E:
+                    QMessageBox::StandardButton reply;
+                    reply = QMessageBox::question(this, QString::fromUtf8("Scale"),
+                        QString::fromUtf8("Yes - Increase \nNo - Decrease"),
+                        QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+                    if (reply == QMessageBox::Yes)
+                    {
+                        glScalef(1.1, 1.1, 1.1);
+                    }
+                    else if (reply == QMessageBox::No)
+                    {
+                        glScalef(0.9, 0.9, 0.9);
+                    }
+                    else return;
+                    break;
+                case Qt::Key_H:
+                    num = QInputDialog::getInt(0, "Set max", "New max is:", 1, 1);
+                    if(bOk) //РЅР°Р¶Р°С‚Р° РћРљ
+                        data.SetMax(num);
+                    break;
+                case Qt::Key_C:
+                    num = QInputDialog::getInt(0, "Set min", "New min is:", 1, 1);
+                    if (bOk)
+                        data.SetMin(num);
+                    break;
+                case Qt::Key_U:
+                    // РџРѕРґРЅСЏС‚СЊСЃСЏ РЅР° СЃР»РѕР№ РІС‹С€Рµ
+                    if (layer < data.getDepth() - 1)
+                    {
+                        layer++;
+                    }
+                break;
+                case Qt::Key_M:
+                    // РћРїСѓСЃС‚РёС‚СЊСЃСЏ РЅР° СЃР»РѕР№ РЅРёР¶Рµ
+                    if (layer != 0)
+                    {
+                        layer--;
+                    }
+                    break;
+                case Qt::Key_N:
+                    if (visualisation_state == kVisualisationQuads)
+                    {
+                        visualisation_state = kVisualisationQuadStrip;
+                    }
+
+                    else if (visualisation_state == kVisualisationQuadStrip)
+                    {
+                        visualisation_state = kVisualisationTexture;
+                    }
+
+                    else
+                    {
+                        visualisation_state = kVisualisationQuads;
+                    }
+                    layer = 0;
+                    break;
+
+                case Qt::Key_Y:
+                    if (axis_cut == axis::x)
+                    {
+                        axis_cut = axis::y;
+                    }
+                    else if (axis_cut == axis::y)
+                    {
+                        axis_cut = axis::z;
+                    }
+                    else if (axis_cut == axis::z)
+                    {
+                        axis_cut = axis::x;
+                    }
+
+                    layer = 0;
+                break;
+
+                case Qt::Key_Q:
+                    std::string path = data.getPath();
+                    if (path == "data/Join.bin")
+                    {
+                        path = "data/FOURDIX-1.bin";
+                        data.clear();
+                        data.readFile(path);
+                    }
+                    else if (path == "data/FOURDIX-1.bin")
+                    {
+                        path = "data/FOURDIX-systolic.bin";
+                        data.clear();
+                        data.readFile(path);
+                    }
+                    else if (path == "data/FOURDIX-systolic.bin")
+                    {
+                        path = "data/p3-after2operation1.bin";
+                        data.clear();
+                        data.readFile(path);
+                    }
+                    else if (path == "data/p3-after2operation1.bin")
+                    {
+                        path = "data/torso1.bin";
+                        data.clear();
+                        data.readFile(path);
+                    }
+                    else if (path == "data/torso1.bin")
+                    {
+                        path = "data/Join.bin";
+                        data.clear();
+                        data.readFile(path);
+                    }
+                    resizeGL(data.getWidth(), data.getHeight());
+                break;
+            }  
         update();
     }
 
@@ -566,6 +593,45 @@ public:
     
     int getWidth() { return vWidth; }
     int getHeight() { return vHeight; }
+
+    void scale_plus()     // РїСЂРёР±Р»РёР·РёС‚СЊ СЃС†РµРЅСѓ
+    {
+        nSca = nSca * 1.1;
+    }
+
+    void scale_minus()   // СѓРґР°Р»РёС‚СЊСЃСЏ РѕС‚ СЃС†РµРЅС‹ 
+    {
+        nSca = nSca / 1.1;
+    }
+
+    void mousePressEvent(QMouseEvent* pe) // РЅР°Р¶Р°С‚РёРµ РєР»Р°РІРёС€Рё РјС‹С€Рё
+    {
+        // РїСЂРё РЅР°Р¶Р°С‚РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј РєРЅРѕРїРєРё РјС‹С€Рё РїРµСЂРµРјРµРЅРЅРѕР№ ptrMousePosition 
+        // Р±СѓРґРµС‚ РїСЂРёСЃРІРѕРµРЅР° РєРѕРѕСЂРґРёРЅР°С‚Р° СѓРєР°Р·Р°С‚РµР»СЏ РјС‹С€Рё 
+        ptrMousePosition = pe->pos();
+
+        //ptrMousePosition = (*pe).pos(); // РјРѕР¶РЅРѕ Рё С‚Р°Рє РЅР°РїРёСЃР°С‚СЊ                          
+    }
+
+    // РёР·РјРµРЅРµРЅРёРµ РїРѕР»РѕР¶РµРЅРёСЏ СЃС‚СЂРµР»РєРё РјС‹С€Рё
+    void mouseMoveEvent(QMouseEvent* pe)
+    {
+        // РІС‹С‡РёСЃР»РµРЅРёРµ СѓРіР»РѕРІ РїРѕРІРѕСЂРѕС‚Р°
+        xR += 180 / nSca * (GLfloat)(pe->y() - ptrMousePosition.y()) / height();
+        zR += 180 / nSca * (GLfloat)(pe->x() - ptrMousePosition.x()) / width();
+
+        ptrMousePosition = pe->pos();
+
+        glTranslatef(zR, 0.0f, 0.0f);    // С‚СЂР°РЅСЃР»СЏС†РёСЏ     
+
+        updateGL(); // РѕР±РЅРѕРІР»РµРЅРёРµ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
+    }
+
+    void wheelEvent(QWheelEvent* pe)
+    {
+        if ((pe->delta()) > 0) scale_plus(); else if ((pe->delta()) < 0) scale_minus();
+        updateGL(); // РѕР±РЅРѕРІР»РµРЅРёРµ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ          
+    }
 };
 
 
